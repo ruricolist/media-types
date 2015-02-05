@@ -13,6 +13,9 @@
                (:file "file-extensions")))
 
 (asdf:defsystem #:media-types-tests
+  :description "Test suite for media-types."
+  :author "Paul M. Rodriguez <pmr@ruricolist.com>"
+  :license "MIT"
   :depends-on (#:media-types #:fiveam)
   :perform (asdf:test-op (o c) (uiop:symbol-call :media-types.tests :run-tests))
   :serial t
