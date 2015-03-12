@@ -77,7 +77,11 @@
 (defun file-name-extension (file)
   (etypecase-of file-designator file
     (string (file-name-extension (pathname file)))
-    (pathname (pathname-type file))))
+    (pathname
+     (let ((type (pathname-type file)))
+       (if (stringp type)
+           type
+           nil)))))
 
 (defun file-name-media-type (file)
   (extension-media-type (file-name-extension file)))
