@@ -91,6 +91,17 @@
         (and (media-subtypep x y)
              (media-subtypep y x)))))
 
+(define-compiler-macro media-type= (&whole call &environment env
+                                           x y)
+  (cond ((and (constantp x env)
+              (constantp y env))
+         `(load-time-value (media-type= ,x ,y)))
+        ((constantp x env)
+         `(media-type= (load-time-value (parse-media-type ,x)) ,y))
+        ((constantp y env)
+         `(media-type= ,x (load-time-value (parse-media-type ,y))))
+        (t call)))
+
 (defun parse-media-type (type &key (allow-params t))
   (etypecase-of media-type-designator type
     (media-type type)
@@ -166,8 +177,7 @@
                                               &environment env)
   (cond ((and (constantp subtype env)
               (constantp type env))
-         `(media-subtypep (load-time-value (parse-media-type ,subtype))
-                          (load-time-value (parse-media-type ,type))))
+         `(load-time-value (media-subtypep ,subtype ,type)))
         ((constantp subtype env)
          `(media-subtypep (load-time-value (parse-media-type ,subtype))
                           ,type))
