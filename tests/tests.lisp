@@ -6,9 +6,6 @@
 (defun run-tests ()
   (5am:run! 'media-types))
 
-(test wildcard-extension
-  (is (null (file-name-extension "index.php?"))))
-
 (test extension-media-type
   (is (equal (extension-media-type "txt") "text/plain"))
   (is (equal (extension-media-type "TXT") "text/plain"))
