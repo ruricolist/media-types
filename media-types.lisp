@@ -69,6 +69,20 @@
 
 (defgeneric media-subtypep (subtype type))
 
+(define-compiler-macro media-subtypep (&whole decline
+                                              subtype type
+                                              &environment env)
+  (cond ((and (constantp subtype env)
+              (constantp type env))
+         `(load-time-value (media-subtypep ,subtype ,type)))
+        ((constantp subtype env)
+         `(media-subtypep (load-time-value (parse-media-type ,subtype))
+                          ,type))
+        ((constantp type env)
+         `(media-subtypep ,subtype
+                          (load-time-value (parse-media-type ,type))))
+        (t decline)))
+
 (defun render-media-type (self stream)
   (format stream
           "~a/~a~@[;~:{~a=~a~^;~}~]"
@@ -175,20 +189,6 @@
              (or (equal subtype2 "*")
                  (equal subtype1 subtype2))
              (subsetp params2 params1 :test #'equalp)))))
-
-(define-compiler-macro media-subtypep (&whole decline
-                                              subtype type
-                                              &environment env)
-  (cond ((and (constantp subtype env)
-              (constantp type env))
-         `(load-time-value (media-subtypep ,subtype ,type)))
-        ((constantp subtype env)
-         `(media-subtypep (load-time-value (parse-media-type ,subtype))
-                          ,type))
-        ((constantp type env)
-         `(media-subtypep ,subtype
-                          (load-time-value (parse-media-type ,type))))
-        (t decline)))
 
 (defmethod media-type-supers ((type media-type))
   (let ((supers '()))
