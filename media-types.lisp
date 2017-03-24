@@ -20,8 +20,11 @@
              (with-slots (type) c
                (format s "Invalid media type: ~a" type)))))
 
-(def media-ranges
+(defconst media-ranges
   '(:application :audio :image :message :model :multipart :text :video))
+
+(deftype media-range ()
+  `(member ,@media-ranges))
 
 ;; Constant types.
 
