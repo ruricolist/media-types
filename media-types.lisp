@@ -1,5 +1,6 @@
 (in-package #:media-types)
 
+(declaim (inline make-media-type))
 (defstruct-read-only media-type
   (type :type string)
   (subtype :type string)
