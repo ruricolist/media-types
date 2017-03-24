@@ -67,22 +67,6 @@
 (defun suffix-type (suffix)
   (assoc-value suffix-types suffix :test #'equal))
 
-(defgeneric media-subtypep (subtype type))
-
-(define-compiler-macro media-subtypep (&whole decline
-                                              subtype type
-                                              &environment env)
-  (cond ((and (constantp subtype env)
-              (constantp type env))
-         `(load-time-value (media-subtypep ,subtype ,type)))
-        ((constantp subtype env)
-         `(media-subtypep (load-time-value (parse-media-type ,subtype))
-                          ,type))
-        ((constantp type env)
-         `(media-subtypep ,subtype
-                          (load-time-value (parse-media-type ,type))))
-        (t decline)))
-
 (defun render-media-type (self stream)
   (format stream
           "~a/~a~@[;~:{~a=~a~^;~}~]"
@@ -101,24 +85,6 @@
     (values (media-type-type type)
             (media-type-subtype type)
             (media-type-params type))))
-
-(defun media-type= (x y)
-  (let ((x (parse-media-type x))
-        (y (parse-media-type y)))
-    (or (equalp x y)
-        (and (media-subtypep x y)
-             (media-subtypep y x)))))
-
-(define-compiler-macro media-type= (&whole call &environment env
-                                           x y)
-  (cond ((and (constantp x env)
-              (constantp y env))
-         `(load-time-value (media-type= ,x ,y)))
-        ((constantp x env)
-         `(media-type= (load-time-value (parse-media-type ,x)) ,y))
-        ((constantp y env)
-         `(media-type= ,x (load-time-value (parse-media-type ,y))))
-        (t call)))
 
 (defun parse-media-type (type &key (allow-params t))
   (etypecase-of media-type-designator type
@@ -166,18 +132,16 @@
   (unless (media-type-valid type :allow-params allow-params)
     (error 'invalid-media-type :type type)))
 
-(defmethod media-subtypep (subtype type)
-  (media-subtypep (parse-media-type subtype)
-                  (parse-media-type type)))
-
 (defun extract-suffix (subtype)
   (check-type subtype string)
   (when-let (pos (position #\+ subtype :from-end t))
     (subseq subtype (1+ pos))))
 
-(defmethod media-subtypep ((subtype media-type) (type media-type))
-  (mvlet ((type1 subtype1 params1 (media-type-values subtype))
-          (type2 subtype2 params2 (media-type-values type)))
+(defun media-subtypep (subtype type)
+  (mvlet* ((subtype (parse-media-type subtype))
+           (type (parse-media-type type))
+           (type1 subtype1 params1 (media-type-values subtype))
+           (type2 subtype2 params2 (media-type-values type)))
     (or (and (equal type2 "*")
              (equal subtype2 "*"))
         (and (equal type2 "application")
@@ -190,27 +154,57 @@
                  (equal subtype1 subtype2))
              (subsetp params2 params1 :test #'equalp)))))
 
-(defmethod media-type-supers ((type media-type))
-  (let ((supers '()))
-    (multiple-value-bind (type subtype params)
-        (media-type-values type)
-      (push (parse-media-type (concat type "/*")) supers)
-      (when-let (pos (position #\+ subtype))
-        (let ((ext (subseq subtype (min (1+ pos) (length subtype)))))
-          (string-case (string-downcase ext)
-            ("xml" (push application/xml supers))
-            ("json" (push application/json supers)))))
-      (when params (loop for set in (sort (powerset params) #'< :key #'length)
-                         if (< (length set) (length params))
-                           do (push (make-media-type :type type
-                                                     :subtype subtype
-                                                     :params set)
-                                    supers))))
-    ;; Already in descending order of specificity.
-    (delete-duplicates supers :test #'media-type=)))
+(define-compiler-macro media-subtypep (&whole decline
+                                              subtype type
+                                              &environment env)
+  (cond ((and (constantp subtype env)
+              (constantp type env))
+         `(load-time-value (media-subtypep ,subtype ,type)))
+        ((constantp subtype env)
+         `(media-subtypep (load-time-value (parse-media-type ,subtype))
+                          ,type))
+        ((constantp type env)
+         `(media-subtypep ,subtype
+                          (load-time-value (parse-media-type ,type))))
+        (t decline)))
 
-(defmethod media-type-supers ((type string))
-  (media-type-supers (parse-media-type type)))
+(defun media-type= (x y)
+  (let ((x (parse-media-type x))
+        (y (parse-media-type y)))
+    (or (equalp x y)
+        (and (media-subtypep x y)
+             (media-subtypep y x)))))
 
-(defmethod media-type-supers ((type symbol))
-  (media-type-supers (parse-media-type type)))
+(define-compiler-macro media-type= (&whole call &environment env
+                                           x y)
+  (cond ((and (constantp x env)
+              (constantp y env))
+         `(load-time-value (media-type= ,x ,y)))
+        ((constantp x env)
+         `(media-type= (load-time-value (parse-media-type ,x)) ,y))
+        ((constantp y env)
+         `(media-type= ,x (load-time-value (parse-media-type ,y))))
+        (t call)))
+
+(defun media-type-supers (type)
+  (etypecase-of media-type-designator type
+    (string (media-type-supers (parse-media-type type)))
+    (symbol (media-type-supers (parse-media-type type)))
+    (media-type
+     (let ((supers '()))
+       (multiple-value-bind (type subtype params)
+           (media-type-values type)
+         (push (parse-media-type (concat type "/*")) supers)
+         (when-let (pos (position #\+ subtype))
+           (let ((ext (subseq subtype (min (1+ pos) (length subtype)))))
+             (string-case (string-downcase ext)
+               ("xml" (push application/xml supers))
+               ("json" (push application/json supers)))))
+         (when params (loop for set in (sort (powerset params) #'< :key #'length)
+                            if (< (length set) (length params))
+                              do (push (make-media-type :type type
+                                                        :subtype subtype
+                                                        :params set)
+                                       supers))))
+       ;; Already in descending order of specificity.
+       (delete-duplicates supers :test #'media-type=)))))
