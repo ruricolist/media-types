@@ -1,9 +1,9 @@
 (in-package #:media-types)
 
-(defstruct media-type
-  (type (error "No type") :type string :read-only t)
-  (subtype (error "No subtype") :type string :read-only t)
-  (params nil :type list :read-only t))
+(defstruct-read-only media-type
+  (type :type string)
+  (subtype :type string)
+  (params nil :type list))
 
 (defun media-type (type subtype &rest params)
   (make-media-type :type type
