@@ -52,7 +52,7 @@
   (is (media-subtypep "application/atom+xml" "application/xml"))
   (is (media-subtypep "application/atom+xml;type=entry" "application/xml"))
   (is (media-subtypep "application/atom+xml;charset=UTF8;type=entry"
-                          "application/atom+xml;type=entry"))
+                      "application/atom+xml;type=entry"))
   (is (not (media-subtypep "application/atom+xml" "application/atom+xml;type=entry")))
   (is (media-subtypep "application/atom+xml;type=entry" "application/atom+xml"))
   (is (not (media-subtypep "application/atom+xml" "application/atom+xml;type=entry")))
@@ -60,3 +60,9 @@
   (is (media-subtypep "application/foo+wbxml" "application/vnd.wap.wbxml"))
   (is (media-subtypep "application/json" 'application/json))
   (is (media-subtypep "image/svg+xml" "application/xml")))
+
+(test printing-params
+  (let* ((input "text/xml;charset=utf-8")
+         (type (parse-media-type input))
+         (output (princ-to-string type)))
+    (is (equal input output))))

@@ -67,24 +67,31 @@
 (defun suffix-type (suffix)
   (assoc-value suffix-types suffix :test #'equal))
 
+(defun media-type-values (type)
+  (let ((type (parse-media-type type)))
+    (values (media-type-type type)
+            (media-type-subtype type)
+            (media-type-params type))))
+
 (defun render-media-type (self stream)
-  (format stream
-          "~a/~a~@[;~:{~a=~a~^;~}~]"
-          (media-type-type self)
-          (media-type-subtype self)
-          (media-type-params self)))
+  (multiple-value-bind (type subtype params)
+      (media-type-values self)
+    (format stream "~a/~a" type subtype)
+    (render-media-type-params params stream)))
+
+(defun render-media-type-params (alist stream)
+  (when alist
+    (format stream ";"))
+  (loop for ((k . v) . more) on alist
+        do (format stream "~a=~a" k v)
+        when more do
+          (format stream ";")))
 
 (defmethod print-object ((self media-type) stream)
   (if *print-escape*
       (print-unreadable-object (self stream :type t :identity nil)
         (render-media-type self stream))
       (render-media-type self stream)))
-
-(defun media-type-values (type)
-  (let ((type (parse-media-type type)))
-    (values (media-type-type type)
-            (media-type-subtype type)
-            (media-type-params type))))
 
 (defun parse-media-type (type &key (allow-params t))
   (etypecase-of media-type-designator type
