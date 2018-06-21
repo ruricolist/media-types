@@ -145,6 +145,7 @@
     (subseq subtype (1+ pos))))
 
 (defun media-subtypep (subtype type)
+  (declare (notinline media-subtypep)) ;SBCL
   (mvlet* ((subtype (parse-media-type subtype))
            (type (parse-media-type type))
            (type1 subtype1 params1 (media-type-values subtype))
@@ -155,7 +156,6 @@
              (equal subtype2 "octet-stream"))
         (when-let* ((suffix (extract-suffix subtype1))
                     (subtype (suffix-type suffix)))
-          (declare (notinline media-subtypep)) ;SBCL
           (media-subtypep (suffix-type suffix) type))
         (and (equal type1 type2)
              (or (equal subtype2 "*")
