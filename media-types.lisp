@@ -155,6 +155,7 @@
              (equal subtype2 "octet-stream"))
         (when-let* ((suffix (extract-suffix subtype1))
                     (subtype (suffix-type suffix)))
+          (declare (notinline media-subtypep)) ;SBCL
           (media-subtypep (suffix-type suffix) type))
         (and (equal type1 type2)
              (or (equal subtype2 "*")
