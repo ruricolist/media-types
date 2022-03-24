@@ -4,8 +4,9 @@
   (asdf:system-relative-pathname :media-types "mime.types")
   "Where to store Apache's mime.types file.")
 
-(defun dotted-extension? (x)
-  (and (stringp x) (string^= "." x)))
+(eval-always
+  (defun dotted-extension? (x)
+    (and (stringp x) (string^= "." x))))
 
 (deftype dotted-extension ()
   '(and string (satisfies dotted-extension?)))
